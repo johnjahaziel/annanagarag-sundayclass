@@ -5,6 +5,11 @@ import '../controllers/home_controller.dart';
 import 'add_teacher.dart';
 import 'add_student.dart';
 import 'add_class.dart';
+import 'add_admin.dart';
+import 'admins_list.dart';
+import 'classes_list.dart';
+import 'students_list.dart';
+import 'teachers_list.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -30,33 +35,6 @@ class _HomepageState extends State<Homepage> {
 
   @override
   Widget build(BuildContext context) {
-    final stats = [
-      _StatCard(
-        title: 'Teachers',
-        value: '24',
-        icon: Icons.school,
-        color: const Color(0xFF7E57C2),
-      ),
-      _StatCard(
-        title: 'Students',
-        value: '180',
-        icon: Icons.groups,
-        color: const Color(0xFF26A69A),
-      ),
-      _StatCard(
-        title: 'Classes',
-        value: '12',
-        icon: Icons.class_,
-        color: const Color(0xFFEF6C00),
-      ),
-      _StatCard(
-        title: 'Transfer',
-        value: '8',
-        icon: Icons.swap_horiz,
-        color: const Color(0xFFEC407A),
-      ),
-    ];
-
     final actions = [
       _ActionTile(
         title: 'Add Teachers',
@@ -72,6 +50,11 @@ class _HomepageState extends State<Homepage> {
         title: 'Add Classes',
         icon: Icons.add_box_outlined,
         color: const Color(0xFF00ACC1),
+      ),
+      _ActionTile(
+        title: 'Add Admin',
+        icon: Icons.admin_panel_settings,
+        color: const Color(0xFFEC407A),
       ),
     ];
 
@@ -119,14 +102,65 @@ class _HomepageState extends State<Homepage> {
                 ],
               ),
               const SizedBox(height: 20),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.8,
-                children: stats.map((stat) => stat).toList(),
+              Obx(
+                () => GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 1.8,
+                  children: [
+                    _StatCard(
+                      title: 'Teachers',
+                      value: '${controller.teacherCount}',
+                      icon: Icons.school,
+                      color: const Color(0xFF7E57C2),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TeachersList(),
+                        ),
+                      ),
+                    ),
+                    _StatCard(
+                      title: 'Students',
+                      value: '${controller.studentCount}',
+                      icon: Icons.groups,
+                      color: const Color(0xFF26A69A),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const StudentsList(),
+                        ),
+                      ),
+                    ),
+                    _StatCard(
+                      title: 'Classes',
+                      value: '${controller.classCount}',
+                      icon: Icons.class_,
+                      color: const Color(0xFFEF6C00),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ClassesList(),
+                        ),
+                      ),
+                    ),
+                    _StatCard(
+                      title: 'Admins',
+                      value: '${controller.adminCount}',
+                      icon: Icons.admin_panel_settings,
+                      color: const Color(0xFFEC407A),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AdminsList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
               const Text(
@@ -180,7 +214,7 @@ class _HomepageState extends State<Homepage> {
                             ),
                           ),
                           TextButton(
-                            onPressed: controller.loadClasses,
+                            onPressed: controller.loadDashboardData,
                             child: const Text('Retry'),
                           ),
                         ],
@@ -295,20 +329,20 @@ class _StatCard extends StatelessWidget {
   final String value;
   final IconData icon;
   final Color color;
+  final VoidCallback onTap;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.icon,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return RawMaterialButton(
-      onPressed: () {
-        // Handle card tap
-      },
+      onPressed: onTap,
       elevation: 2,
       fillColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -380,6 +414,11 @@ class _ActionTileWidget extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddClass()),
+          );
+        } else if (action.title == 'Add Admin') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddAdmin()),
           );
         }
         // Handle other action taps here

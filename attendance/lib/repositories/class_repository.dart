@@ -41,9 +41,16 @@ class DuplicateDivisionException implements Exception {
 /// named sub-groups within it (Beginner 1, Beginner 2, ...).
 class ClassRepository {
   ClassRepository({FirebaseFirestore? firestore})
-    : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestoreOverride = firestore;
 
-  final FirebaseFirestore _firestore;
+  final FirebaseFirestore? _firestoreOverride;
+
+  // Resolved lazily (rather than in the constructor) so that constructing a
+  // repository/controller before Firebase.initializeApp() has run doesn't
+  // throw outside of a try/catch — the error instead surfaces from whichever
+  // method actually touches Firestore, where callers already handle it.
+  FirebaseFirestore get _firestore =>
+      _firestoreOverride ?? FirebaseFirestore.instance;
 
   CollectionReference<Map<String, dynamic>> get _classCollection =>
       _firestore.collection('class');
@@ -51,6 +58,35 @@ class ClassRepository {
   /// The Firestore document id for a given main class name.
   static String normalizeId(String mainClassName) =>
       mainClassName.trim().toLowerCase();
+
+  /// The order main classes should be displayed in (Sunday-school age
+  /// groups, youngest to oldest), keyed by normalized id. Classes not on
+  /// this list (e.g. a newly added one) are appended afterwards,
+  /// alphabetically.
+  static const List<String> _displayOrder = [
+    'beginner',
+    'primary',
+    'junior',
+    'inter',
+  ];
+
+  List<MainClass> _sortByDisplayOrder(List<MainClass> classes) {
+    final ranked = <MainClass>[];
+    final unranked = <MainClass>[];
+    for (final mainClass in classes) {
+      if (_displayOrder.contains(mainClass.id)) {
+        ranked.add(mainClass);
+      } else {
+        unranked.add(mainClass);
+      }
+    }
+    ranked.sort(
+      (a, b) =>
+          _displayOrder.indexOf(a.id).compareTo(_displayOrder.indexOf(b.id)),
+    );
+    unranked.sort((a, b) => a.name.compareTo(b.name));
+    return [...ranked, ...unranked];
+  }
 
   /// Returns a user-facing validation message for [rawDivisions], or null
   /// when they're all non-empty and free of duplicates (case-insensitive).
@@ -66,10 +102,24 @@ class ClassRepository {
     return null;
   }
 
-  /// Loads every main class document.
+  /// Loads every main class document, in [_displayOrder].
   Future<List<MainClass>> getMainClasses() async {
-    final snapshot = await _classCollection.orderBy('name').get();
-    return snapshot.docs.map(MainClass.fromFirestore).toList();
+    final snapshot = await _classCollection.get();
+    return _sortByDisplayOrder(
+      snapshot.docs.map(MainClass.fromFirestore).toList(),
+    );
+  }
+
+  /// Live view of every main class document in [_displayOrder], updating
+  /// whenever one is added, renamed, or has divisions changed. Used by
+  /// pickers (e.g. the Assigned Class dropdown) that should reflect new
+  /// classes immediately.
+  Stream<List<MainClass>> streamMainClasses() {
+    return _classCollection.snapshots().map(
+      (snapshot) => _sortByDisplayOrder(
+        snapshot.docs.map(MainClass.fromFirestore).toList(),
+      ),
+    );
   }
 
   /// Creates a brand new main class document with its initial divisions.

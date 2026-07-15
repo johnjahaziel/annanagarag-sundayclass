@@ -1,28 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../controllers/add_teacher_controller.dart';
+import '../controllers/add_admin_controller.dart';
 
-class AddTeacher extends StatefulWidget {
-  const AddTeacher({super.key});
+class AddAdmin extends StatefulWidget {
+  const AddAdmin({super.key});
 
   @override
-  State<AddTeacher> createState() => _AddTeacherState();
+  State<AddAdmin> createState() => _AddAdminState();
 }
 
-class _AddTeacherState extends State<AddTeacher> {
+class _AddAdminState extends State<AddAdmin> {
   final _formKey = GlobalKey<FormState>();
-  late final AddTeacherController controller;
+  late final AddAdminController controller;
+
+  static const _accentColor = Color(0xFFEC407A);
 
   @override
   void initState() {
     super.initState();
-    controller = Get.put(AddTeacherController());
+    controller = Get.put(AddAdminController());
   }
 
   @override
   void dispose() {
-    Get.delete<AddTeacherController>();
+    Get.delete<AddAdminController>();
     super.dispose();
   }
 
@@ -35,12 +37,12 @@ class _AddTeacherState extends State<AddTeacher> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Teacher added successfully!')));
+      ).showSnackBar(const SnackBar(content: Text('Admin added successfully!')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save teacher: $e')));
+      ).showSnackBar(SnackBar(content: Text('Failed to save admin: $e')));
     }
   }
 
@@ -49,10 +51,10 @@ class _AddTeacherState extends State<AddTeacher> {
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF7E57C2),
+        backgroundColor: _accentColor,
         elevation: 0,
         title: const Text(
-          'Add Teacher',
+          'Add Admin',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -85,15 +87,11 @@ class _AddTeacherState extends State<AddTeacher> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: const Color(
-                                0xFF7E57C2,
-                              ).withValues(alpha: 0.3),
+                              color: _accentColor.withValues(alpha: 0.3),
                               width: 3,
                             ),
                             color: image == null
-                                ? const Color(
-                                    0xFF7E57C2,
-                                  ).withValues(alpha: 0.1)
+                                ? _accentColor.withValues(alpha: 0.1)
                                 : null,
                             image: image != null
                                 ? DecorationImage(
@@ -103,10 +101,10 @@ class _AddTeacherState extends State<AddTeacher> {
                                 : null,
                           ),
                           child: image == null
-                              ? const Icon(
-                                  Icons.camera_alt,
-                                  size: 40,
-                                  color: Color(0xFF7E57C2),
+                              ? Icon(
+                                  Icons.admin_panel_settings,
+                                  size: 50,
+                                  color: _accentColor,
                                 )
                               : null,
                         ),
@@ -116,7 +114,7 @@ class _AddTeacherState extends State<AddTeacher> {
                           icon: const Icon(Icons.add_a_photo),
                           label: const Text('Upload Photo'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7E57C2),
+                            backgroundColor: _accentColor,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 20,
@@ -147,64 +145,6 @@ class _AddTeacherState extends State<AddTeacher> {
                 ),
                 const SizedBox(height: 18),
 
-                // Username Field (auto-generated, editable via icon)
-                _buildLabel('Username'),
-                Obx(
-                  () => TextFormField(
-                    controller: controller.usernameController,
-                    readOnly: !controller.isUsernameEditable.value,
-                    decoration:
-                        _buildInputDecoration(
-                          'Auto-generated from name',
-                          Icons.alternate_email,
-                        ).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              controller.isUsernameEditable.value
-                                  ? Icons.lock_open
-                                  : Icons.edit,
-                              color: const Color(0xFF7E57C2),
-                            ),
-                            tooltip: controller.isUsernameEditable.value
-                                ? 'Lock (revert to auto-generated)'
-                                : 'Edit username manually',
-                            onPressed: controller.toggleUsernameEditable,
-                          ),
-                        ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Username is required';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // Gender Dropdown
-                _buildLabel('Gender'),
-                Obx(
-                  () => DropdownButtonFormField<String>(
-                    value: controller.selectedGender.value,
-                    borderRadius: BorderRadius.circular(12),
-                    dropdownColor: const Color(0xFFF7F9FC),
-                    decoration: _buildInputDecoration('Select gender', Icons.wc),
-                    items: AddTeacherController.genderOptions.map((gender) {
-                      return DropdownMenuItem(
-                        value: gender,
-                        child: Text(gender),
-                      );
-                    }).toList(),
-                    onChanged: (value) =>
-                        controller.selectedGender.value = value,
-                    validator: (value) {
-                      if (value == null) return 'Please select a gender';
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(height: 18),
-
                 // Phone Field
                 _buildLabel('Phone'),
                 TextFormField(
@@ -223,70 +163,24 @@ class _AddTeacherState extends State<AddTeacher> {
                 ),
                 const SizedBox(height: 18),
 
-                // Assigned Class Dropdown (divisions, same list shown in
-                // the Homepage's Class List, live from the `class`
-                // collection)
-                _buildLabel('Assigned Class'),
-                Obx(() {
-                  if (controller.isLoadingMainClasses.value) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                        child: SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2.5),
-                        ),
-                      ),
-                    );
-                  }
-                  if (controller.mainClassesError.value != null) {
-                    return Text(
-                      controller.mainClassesError.value!,
-                      style: const TextStyle(color: Colors.redAccent),
-                    );
-                  }
-                  return DropdownButtonFormField<String>(
-                    value: controller.selectedAssignedClass.value,
+                // Gender Dropdown
+                _buildLabel('Gender'),
+                Obx(
+                  () => DropdownButtonFormField<String>(
+                    value: controller.selectedGender.value,
                     borderRadius: BorderRadius.circular(12),
                     dropdownColor: const Color(0xFFF7F9FC),
-                    decoration: _buildInputDecoration(
-                      'Select class',
-                      Icons.class_,
-                    ),
-                    items: controller.assignedClassOptions.map((division) {
+                    decoration: _buildInputDecoration('Select gender', Icons.wc),
+                    items: AddAdminController.genderOptions.map((gender) {
                       return DropdownMenuItem(
-                        value: division,
-                        child: Text(division),
+                        value: gender,
+                        child: Text(gender),
                       );
                     }).toList(),
                     onChanged: (value) =>
-                        controller.selectedAssignedClass.value = value,
+                        controller.selectedGender.value = value,
                     validator: (value) {
-                      if (value == null) return 'Please select a class';
-                      return null;
-                    },
-                  );
-                }),
-                const SizedBox(height: 18),
-
-                // Role Dropdown
-                _buildLabel('Role'),
-                Obx(
-                  () => DropdownButtonFormField<String>(
-                    value: controller.selectedRole.value,
-                    borderRadius: BorderRadius.circular(12),
-                    dropdownColor: const Color(0xFFF7F9FC),
-                    decoration: _buildInputDecoration(
-                      'Select role',
-                      Icons.assignment_ind,
-                    ),
-                    items: AddTeacherController.roleOptions.map((role) {
-                      return DropdownMenuItem(value: role, child: Text(role));
-                    }).toList(),
-                    onChanged: (value) => controller.selectedRole.value = value,
-                    validator: (value) {
-                      if (value == null) return 'Please select a role';
+                      if (value == null) return 'Please select a gender';
                       return null;
                     },
                   ),
@@ -302,7 +196,7 @@ class _AddTeacherState extends State<AddTeacher> {
                           ? null
                           : _submitForm,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7E57C2),
+                        backgroundColor: _accentColor,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -319,7 +213,7 @@ class _AddTeacherState extends State<AddTeacher> {
                               ),
                             )
                           : const Text(
-                              'Add Teacher',
+                              'Add Admin',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -336,10 +230,7 @@ class _AddTeacherState extends State<AddTeacher> {
                   child: OutlinedButton(
                     onPressed: () => Navigator.pop(context),
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(
-                        color: Color(0xFF7E57C2),
-                        width: 2,
-                      ),
+                      side: const BorderSide(color: _accentColor, width: 2),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -350,7 +241,7 @@ class _AddTeacherState extends State<AddTeacher> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF7E57C2),
+                        color: _accentColor,
                       ),
                     ),
                   ),
@@ -381,7 +272,7 @@ class _AddTeacherState extends State<AddTeacher> {
   InputDecoration _buildInputDecoration(String hint, IconData icon) {
     return InputDecoration(
       hintText: hint,
-      prefixIcon: Icon(icon, color: const Color(0xFF7E57C2)),
+      prefixIcon: Icon(icon, color: _accentColor),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -392,7 +283,7 @@ class _AddTeacherState extends State<AddTeacher> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF7E57C2), width: 2),
+        borderSide: const BorderSide(color: _accentColor, width: 2),
       ),
       filled: true,
       fillColor: Colors.white,

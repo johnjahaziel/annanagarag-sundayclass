@@ -1,279 +1,422 @@
 import 'package:flutter/material.dart';
 
-class ClassDetail extends StatelessWidget {
+import '../models/student.dart';
+import '../models/teacher.dart';
+import '../repositories/student_repository.dart';
+import '../repositories/teacher_repository.dart';
+import 'student_detail.dart';
+import 'teacher_detail.dart';
+
+class _ClassDetailData {
+  const _ClassDetailData({required this.teacher, required this.students});
+
+  final Teacher? teacher;
+  final List<Student> students;
+}
+
+class ClassDetail extends StatefulWidget {
   final String className;
 
   const ClassDetail({super.key, required this.className});
 
   @override
+  State<ClassDetail> createState() => _ClassDetailState();
+}
+
+class _ClassDetailState extends State<ClassDetail> {
+  final _teacherRepository = TeacherRepository();
+  final _studentRepository = StudentRepository();
+  late Future<_ClassDetailData> _future;
+
+  static const _gradientColors = [Color(0xFF7E57C2), Color(0xFF5E35B1)];
+  static const _accentColor = Color(0xFF5E35B1);
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<_ClassDetailData> _load() async {
+    final results = await Future.wait([
+      _teacherRepository.getTeacherForClass(widget.className),
+      _studentRepository.getStudentsForClass(widget.className),
+    ]);
+    return _ClassDetailData(
+      teacher: results[0] as Teacher?,
+      students: results[1] as List<Student>,
+    );
+  }
+
+  Future<void> _refresh() async {
+    final next = _load();
+    setState(() {
+      _future = next;
+    });
+    await next;
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // Mock data - replace with real data from your backend
-    final totalStudents = 24;
-    final presentLastWeek = 22;
-    final absentLastWeek = 2;
-    final teacherName = 'Ms. Sarah Johnson';
-    final teacherImage = 'https://i.pravatar.cc/150?img=1'; // Placeholder image
-
-    final students = [
-      {
-        'name': 'Alice Brown',
-        'status': 'Present',
-        'image': 'https://i.pravatar.cc/150?img=5',
-      },
-      {
-        'name': 'Bob Smith',
-        'status': 'Absent',
-        'image': 'https://i.pravatar.cc/150?img=6',
-      },
-      {
-        'name': 'Charlie Davis',
-        'status': 'Present',
-        'image': 'https://i.pravatar.cc/150?img=7',
-      },
-      {
-        'name': 'Diana Prince',
-        'status': 'Present',
-        'image': 'https://i.pravatar.cc/150?img=8',
-      },
-      {
-        'name': 'Emma Wilson',
-        'status': 'Absent',
-        'image': 'https://i.pravatar.cc/150?img=9',
-      },
-      {
-        'name': 'Frank Miller',
-        'status': 'Present',
-        'image': 'https://i.pravatar.cc/150?img=10',
-      },
-    ];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF7F9FC),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      body: FutureBuilder<_ClassDetailData>(
+        future: _future,
+        builder: (context, snapshot) {
+          return SafeArea(
+            bottom: false,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context, snapshot),
+                Expanded(child: _buildBody(context, snapshot)),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildHeader(
+    BuildContext context,
+    AsyncSnapshot<_ClassDetailData> snapshot,
+  ) {
+    final isLoaded = snapshot.connectionState == ConnectionState.done;
+    final studentCount = snapshot.data?.students.length;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: _gradientColors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: _accentColor.withValues(alpha: 0.35),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Header with back button
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => Navigator.pop(context),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
-                          size: 20,
-                          color: Color(0xFF1E3A5F),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Class Detail',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF1E3A5F),
-                          ),
-                        ),
-                        Text(
-                          className,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Teacher Card
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+              GestureDetector(
+                onTap: () => Navigator.pop(context),
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF7E57C2),
-                        const Color(0xFF5E35B1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
+                    color: Colors.white.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                        ),
-                        child: ClipOval(
-                          child: Image.network(
-                            teacherImage,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.white30,
-                                child: const Icon(
-                                  Icons.person,
-                                  color: Colors.white,
-                                  size: 30,
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Class Teacher',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.white70,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              teacherName,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white24,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Text(
-                                'Active',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: const Icon(
+                    Icons.arrow_back_ios_new,
+                    size: 18,
+                    color: Colors.white,
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
-              // Attendance Stats
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Last Week Attendance',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1E3A5F),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _StatBox(
-                            title: 'Total',
-                            value: totalStudents.toString(),
-                            color: const Color(0xFF00ACC1),
-                            icon: Icons.groups,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatBox(
-                            title: 'Present',
-                            value: presentLastWeek.toString(),
-                            color: const Color(0xFF26A69A),
-                            icon: Icons.check_circle,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _StatBox(
-                            title: 'Absent',
-                            value: absentLastWeek.toString(),
-                            color: const Color(0xFFEF6C00),
-                            icon: Icons.cancel,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: Colors.white,
+                  size: 20,
                 ),
               ),
-              const SizedBox(height: 24),
-              // Students Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Text(
+            ],
+          ),
+          const SizedBox(height: 22),
+          Text(
+            widget.className,
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.groups, size: 16, color: Colors.white70),
+              const SizedBox(width: 6),
+              Text(
+                isLoaded
+                    ? '${studentCount ?? 0} student${studentCount == 1 ? '' : 's'}'
+                    : 'Loading…',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBody(
+    BuildContext context,
+    AsyncSnapshot<_ClassDetailData> snapshot,
+  ) {
+    if (snapshot.connectionState != ConnectionState.done) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (snapshot.hasError) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 40,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Failed to load: ${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+              const SizedBox(height: 12),
+              TextButton(onPressed: _refresh, child: const Text('Retry')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final teacher = snapshot.data!.teacher;
+    final students = snapshot.data!.students;
+
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 20),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            child: _TeacherCard(
+              teacher: teacher,
+              onTap: teacher != null
+                  ? () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              TeacherDetail(teacher: teacher),
+                        ),
+                      );
+                    }
+                  : null,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _accentColor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.groups_2_rounded,
+                    size: 16,
+                    color: _accentColor,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
                   'Students',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 17,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1E3A5F),
                   ),
                 ),
+              ],
+            ),
+          ),
+          if (students.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+              child: Column(
+                children: [
+                  Icon(Icons.school_outlined, size: 48, color: Colors.black26),
+                  SizedBox(height: 12),
+                  Text(
+                    'No students in this class yet.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              // Student Cards Grid
+            )
+          else
+            for (final student in students)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.95,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                  ),
-                  itemCount: students.length,
-                  itemBuilder: (context, index) {
-                    final student = students[index];
-                    return _StudentCard(
-                      name: student['name']!,
-                      status: student['status']!,
-                      image: student['image']!,
+                child: _StudentCard(
+                  student: student,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => StudentDetail(student: student),
+                      ),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 24),
-            ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Big card showing the assigned teacher's photo, name, and phone number.
+class _TeacherCard extends StatelessWidget {
+  final Teacher? teacher;
+  final VoidCallback? onTap;
+
+  const _TeacherCard({required this.teacher, required this.onTap});
+
+  static const _accentColor = Color(0xFF5E35B1);
+
+  @override
+  Widget build(BuildContext context) {
+    final teacher = this.teacher;
+    final photoUrl = teacher?.photoUrl;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: _accentColor.withValues(alpha: 0.1),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 76,
+                  height: 76,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _accentColor.withValues(alpha: 0.3),
+                      width: 3,
+                    ),
+                    color: _accentColor.withValues(alpha: 0.1),
+                  ),
+                  child: ClipOval(
+                    child: photoUrl != null && photoUrl.isNotEmpty
+                        ? Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.person,
+                                  size: 34,
+                                  color: _accentColor,
+                                ),
+                          )
+                        : const Icon(
+                            Icons.person,
+                            size: 34,
+                            color: _accentColor,
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Class Teacher',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        teacher?.name ?? 'No Teacher Assigned',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: teacher != null
+                              ? const Color(0xFF1E3A5F)
+                              : Colors.black45,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (teacher != null) ...[
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.phone,
+                              size: 14,
+                              color: _accentColor,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              teacher.phone,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: _accentColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (teacher != null)
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Colors.black26,
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -281,189 +424,120 @@ class ClassDetail extends StatelessWidget {
   }
 }
 
-class _StatBox extends StatelessWidget {
-  final String title;
-  final String value;
-  final Color color;
-  final IconData icon;
-
-  const _StatBox({
-    required this.title,
-    required this.value,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
+/// Full-width rectangular student card: photo, name, and status.
+///
+/// There's no daily attendance tracking implemented yet, so "status" here
+/// reflects the student's own active/inactive field rather than a real
+/// per-day attendance record.
 class _StudentCard extends StatelessWidget {
-  final String name;
-  final String status;
-  final String image;
+  final Student student;
+  final VoidCallback onTap;
 
-  const _StudentCard({
-    required this.name,
-    required this.status,
-    required this.image,
-  });
+  const _StudentCard({required this.student, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    final isPresent = status == 'Present';
-    final statusColor = isPresent
+    final statusColor = student.isActive
         ? const Color(0xFF26A69A)
         : const Color(0xFFEF6C00);
-    final statusIcon = isPresent ? Icons.check_circle : Icons.cancel;
+    final statusIcon = student.isActive ? Icons.check_circle : Icons.cancel;
+    final statusLabel = student.isActive ? 'Active' : 'Inactive';
+    final photoUrl = student.photoUrl;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          // Student Image
-          Container(
-            height: 100,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-              gradient: LinearGradient(
-                colors: [
-                  statusColor.withValues(alpha: 0.2),
-                  statusColor.withValues(alpha: 0.05),
-                ],
-              ),
-            ),
-            child: Center(
-              child: Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: statusColor, width: 2),
-                ),
-                child: ClipOval(
-                  child: Image.network(
-                    image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: statusColor.withValues(alpha: 0.2),
-                        child: Icon(Icons.person, color: statusColor, size: 35),
-                      );
-                    },
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: statusColor, width: 2),
+                  ),
+                  child: ClipOval(
+                    child: photoUrl != null && photoUrl.isNotEmpty
+                        ? Image.network(
+                            photoUrl,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(
+                                  Icons.person,
+                                  color: statusColor,
+                                  size: 28,
+                                ),
+                          )
+                        : Icon(Icons.person, color: statusColor, size: 28),
                   ),
                 ),
-              ),
-            ),
-          ),
-          // Student Info
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    student.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF1E3A5F),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
+                      Icon(statusIcon, color: statusColor, size: 14),
+                      const SizedBox(width: 4),
                       Text(
-                        name,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 13,
+                        statusLabel,
+                        style: TextStyle(
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
-                          color: Color(0xFF1E3A5F),
+                          color: statusColor,
                         ),
                       ),
                     ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(statusIcon, color: statusColor, size: 14),
-                        const SizedBox(width: 4),
-                        Text(
-                          status,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: statusColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 6),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 20,
+                  color: Colors.black26,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
