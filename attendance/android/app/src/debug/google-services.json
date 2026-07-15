@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "939423099620",
+    "project_id": "annanagarag-church",
+    "storage_bucket": "annanagarag-church.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:939423099620:android:10a220aa57ed4827c4daf1",
+        "android_client_info": {
+          "package_name": "com.annanagarag.attendance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCeSqV1RV8XzBmnul3QH9zKd45wfYppA6k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
