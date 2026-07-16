@@ -145,6 +145,40 @@ class _AddAdminState extends State<AddAdmin> {
                 ),
                 const SizedBox(height: 18),
 
+                // Username Field (auto-generated, editable via icon)
+                _buildLabel('Username'),
+                Obx(
+                  () => TextFormField(
+                    controller: controller.usernameController,
+                    readOnly: !controller.isUsernameEditable.value,
+                    decoration:
+                        _buildInputDecoration(
+                          'Auto-generated from name',
+                          Icons.alternate_email,
+                        ).copyWith(
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              controller.isUsernameEditable.value
+                                  ? Icons.lock_open
+                                  : Icons.edit,
+                              color: _accentColor,
+                            ),
+                            tooltip: controller.isUsernameEditable.value
+                                ? 'Lock (revert to auto-generated)'
+                                : 'Edit username manually',
+                            onPressed: controller.toggleUsernameEditable,
+                          ),
+                        ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Username is required';
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+                const SizedBox(height: 18),
+
                 // Phone Field
                 _buildLabel('Phone'),
                 TextFormField(

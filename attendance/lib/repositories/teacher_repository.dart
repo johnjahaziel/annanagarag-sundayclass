@@ -64,6 +64,19 @@ class TeacherRepository {
     return snapshot.docs.map(Teacher.fromFirestore).toList();
   }
 
+  /// The teacher with this [username], or null if none matches — used for
+  /// the username-based login flow.
+  Future<Teacher?> getByUsername(String username) async {
+    final normalized = normalizeUsername(username);
+    if (normalized.isEmpty) return null;
+    final snapshot = await _teachersCollection
+        .where('username', isEqualTo: normalized)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    return Teacher.fromFirestore(snapshot.docs.first);
+  }
+
   /// The teacher assigned to [assignedClass] (a division, e.g.
   /// "Beginner 1"), or null if none is assigned. If more than one somehow
   /// matches, the first is returned.

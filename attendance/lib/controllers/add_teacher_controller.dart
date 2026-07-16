@@ -24,7 +24,6 @@ class AddTeacherController extends GetxController {
   final ClassRepository _classRepository;
 
   static const genderOptions = ['Male', 'Female'];
-  static const roleOptions = ['Teacher', 'Admin'];
 
   final nameController = TextEditingController();
   final usernameController = TextEditingController();
@@ -34,7 +33,6 @@ class AddTeacherController extends GetxController {
 
   final RxnString selectedGender = RxnString();
   final RxnString selectedAssignedClass = RxnString();
-  final RxnString selectedRole = RxnString();
 
   final mainClasses = <MainClass>[].obs;
   final isLoadingMainClasses = false.obs;
@@ -112,7 +110,7 @@ class AddTeacherController extends GetxController {
         gender: selectedGender.value!,
         phone: phoneController.text,
         assignedClass: selectedAssignedClass.value!,
-        role: selectedRole.value!,
+        role: 'Teacher',
         status: 'Active',
         photoFile: selectedImage.value,
       );
@@ -129,7 +127,6 @@ class AddTeacherController extends GetxController {
     isUsernameEditable.value = false;
     selectedGender.value = null;
     selectedAssignedClass.value = null;
-    selectedRole.value = null;
     selectedImage.value = null;
   }
 

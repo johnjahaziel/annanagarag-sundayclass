@@ -268,29 +268,6 @@ class _AddTeacherState extends State<AddTeacher> {
                     },
                   );
                 }),
-                const SizedBox(height: 18),
-
-                // Role Dropdown
-                _buildLabel('Role'),
-                Obx(
-                  () => DropdownButtonFormField<String>(
-                    value: controller.selectedRole.value,
-                    borderRadius: BorderRadius.circular(12),
-                    dropdownColor: const Color(0xFFF7F9FC),
-                    decoration: _buildInputDecoration(
-                      'Select role',
-                      Icons.assignment_ind,
-                    ),
-                    items: AddTeacherController.roleOptions.map((role) {
-                      return DropdownMenuItem(value: role, child: Text(role));
-                    }).toList(),
-                    onChanged: (value) => controller.selectedRole.value = value,
-                    validator: (value) {
-                      if (value == null) return 'Please select a role';
-                      return null;
-                    },
-                  ),
-                ),
                 const SizedBox(height: 30),
 
                 // Submit Button

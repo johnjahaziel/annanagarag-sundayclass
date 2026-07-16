@@ -8,8 +8,11 @@ import 'add_class.dart';
 import 'add_admin.dart';
 import 'admins_list.dart';
 import 'classes_list.dart';
+import 'login.dart';
+import 'reports/reports_screen.dart';
 import 'students_list.dart';
 import 'teachers_list.dart';
+import '../services/session_service.dart';
 
 class Homepage extends StatefulWidget {
   const Homepage({super.key});
@@ -31,6 +34,12 @@ class _HomepageState extends State<Homepage> {
   void dispose() {
     Get.delete<HomeController>();
     super.dispose();
+  }
+
+  Future<void> _logout(BuildContext context) async {
+    await SessionService().clearSession();
+    if (!context.mounted) return;
+    Get.offAll(() => const Login());
   }
 
   @override
@@ -293,27 +302,57 @@ class _HomepageState extends State<Homepage> {
               const SizedBox(height: 12),
               _HighlightPanelCard(
                 title: 'Reports',
-                subtitle: 'Overview of requests and progress',
+                subtitle: 'Attendance insights at a glance',
                 accentColor: const Color(0xFF00ACC1),
                 icon: Icons.insights_rounded,
                 child: Column(
-                  children: const [
-                    _ReportItem(
-                      label: 'Request Section',
-                      icon: Icons.request_page,
-                      color: Color(0xFF00ACC1),
-                    ),
+                  children: [
                     _ReportItem(
                       label: 'Weekly Report',
                       icon: Icons.calendar_view_week,
-                      color: Color(0xFF26A69A),
+                      color: const Color(0xFF26A69A),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const ReportsScreen(initialIndex: 0),
+                          ),
+                        );
+                      },
                     ),
                     _ReportItem(
                       label: 'Monthly Report',
                       icon: Icons.bar_chart,
-                      color: Color(0xFFEF6C00),
+                      color: const Color(0xFFEF6C00),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const ReportsScreen(initialIndex: 1),
+                          ),
+                        );
+                      },
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () => _logout(context),
+                  icon: const Icon(Icons.logout_rounded),
+                  label: const Text('Logout'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFFEF6C00),
+                    side: const BorderSide(color: Color(0xFFEF6C00), width: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -536,17 +575,19 @@ class _ReportItem extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final VoidCallback onTap;
 
   const _ReportItem({
     required this.label,
     required this.icon,
     required this.color,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return RawMaterialButton(
-      onPressed: () {},
+      onPressed: onTap,
       splashColor: const Color.fromARGB(255, 199, 243, 245),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),

@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/admin.dart';
 import '../services/cloudinary_service.dart';
+import 'teacher_repository.dart'
+    show TeacherRepository, UsernameAlreadyTakenException;
 
 /// Data access layer for the `admins` Firestore collection.
 class AdminRepository {
@@ -25,10 +27,42 @@ class AdminRepository {
   static const _adminIdPrefix = 'ADM';
   static const _adminIdDigits = 3;
 
+  static String normalizeUsername(String username) =>
+      TeacherRepository.normalizeUsername(username);
+
+  /// Derives a username from a full name, e.g. "John Jahaziel" ->
+  /// "johnjahaziel" (lower-cased, alphanumeric characters only).
+  static String suggestUsername(String name) =>
+      TeacherRepository.suggestUsername(name);
+
+  /// Whether [username] is already used by another admin document.
+  Future<bool> isUsernameTaken(String username) async {
+    final normalized = normalizeUsername(username);
+    if (normalized.isEmpty) return false;
+    final snapshot = await _adminsCollection
+        .where('username', isEqualTo: normalized)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
   /// Loads every admin document, ordered by their sequential adminId.
   Future<List<Admin>> getAdmins() async {
     final snapshot = await _adminsCollection.orderBy('adminId').get();
     return snapshot.docs.map(Admin.fromFirestore).toList();
+  }
+
+  /// The admin with this [username], or null if none matches — used for
+  /// the username-based login flow.
+  Future<Admin?> getByUsername(String username) async {
+    final normalized = normalizeUsername(username);
+    if (normalized.isEmpty) return null;
+    final snapshot = await _adminsCollection
+        .where('username', isEqualTo: normalized)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    return Admin.fromFirestore(snapshot.docs.first);
   }
 
   Future<String> _generateNextAdminId() async {
@@ -51,12 +85,21 @@ class AdminRepository {
   /// Creates a new admin document. If [photoFile] is provided, it's
   /// uploaded to Cloudinary first (unsigned, via [CloudinaryService]) and
   /// its `secure_url` saved as `photoUrl`.
+  ///
+  /// Throws [UsernameAlreadyTakenException] if [username] is already in use.
   Future<Admin> createAdmin({
     required String name,
+    required String username,
     required String phone,
     required String gender,
+    required String role,
     File? photoFile,
   }) async {
+    final normalizedUsername = normalizeUsername(username);
+    if (await isUsernameTaken(normalizedUsername)) {
+      throw UsernameAlreadyTakenException(normalizedUsername);
+    }
+
     final adminId = await _generateNextAdminId();
     final trimmedName = name.trim();
     final trimmedPhone = phone.trim();
@@ -72,8 +115,10 @@ class AdminRepository {
     final docRef = await _adminsCollection.add({
       'adminId': adminId,
       'name': trimmedName,
+      'username': normalizedUsername,
       'phone': trimmedPhone,
       'gender': gender,
+      'role': role,
       'isActive': true,
       'photoUrl': photoUrl,
       'createdAt': FieldValue.serverTimestamp(),
@@ -83,8 +128,10 @@ class AdminRepository {
       id: docRef.id,
       adminId: adminId,
       name: trimmedName,
+      username: normalizedUsername,
       phone: trimmedPhone,
       gender: gender,
+      role: role,
       isActive: true,
       photoUrl: photoUrl,
       createdAt: DateTime.now(),

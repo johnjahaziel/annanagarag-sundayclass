@@ -1,17 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../models/attendance_session.dart';
 import '../models/student.dart';
 import '../models/teacher.dart';
+import '../repositories/attendance_repository.dart';
 import '../repositories/student_repository.dart';
 import '../repositories/teacher_repository.dart';
 import 'student_detail.dart';
+import 'take_attendance.dart';
 import 'teacher_detail.dart';
 
 class _ClassDetailData {
-  const _ClassDetailData({required this.teacher, required this.students});
+  const _ClassDetailData({
+    required this.teacher,
+    required this.students,
+    required this.session,
+  });
 
   final Teacher? teacher;
   final List<Student> students;
+  final AttendanceSession? session;
 }
 
 class ClassDetail extends StatefulWidget {
@@ -26,10 +34,14 @@ class ClassDetail extends StatefulWidget {
 class _ClassDetailState extends State<ClassDetail> {
   final _teacherRepository = TeacherRepository();
   final _studentRepository = StudentRepository();
+  final _attendanceRepository = AttendanceRepository();
   late Future<_ClassDetailData> _future;
 
-  static const _gradientColors = [Color(0xFF7E57C2), Color(0xFF5E35B1)];
+  static const _gradientColors = [Color(0xFF7E57C2), Color(0xFFAB47BC)];
   static const _accentColor = Color(0xFF5E35B1);
+  static const _presentColor = Color(0xFF26A69A);
+  static const _absentColor = Color(0xFFEF6C00);
+  static const _takeAttendanceColor = Color(0xFF26C6DA);
 
   @override
   void initState() {
@@ -38,13 +50,19 @@ class _ClassDetailState extends State<ClassDetail> {
   }
 
   Future<_ClassDetailData> _load() async {
+    final today = DateTime.now();
     final results = await Future.wait([
       _teacherRepository.getTeacherForClass(widget.className),
       _studentRepository.getStudentsForClass(widget.className),
+      _attendanceRepository.getSessionForDate(
+        className: widget.className,
+        date: today,
+      ),
     ]);
     return _ClassDetailData(
       teacher: results[0] as Teacher?,
       students: results[1] as List<Student>,
+      session: results[2] as AttendanceSession?,
     );
   }
 
@@ -54,6 +72,23 @@ class _ClassDetailState extends State<ClassDetail> {
       _future = next;
     });
     await next;
+  }
+
+  Future<void> _openTakeAttendance(_ClassDetailData data) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TakeAttendanceScreen(
+          className: widget.className,
+          students: data.students,
+          teacher: data.teacher,
+          existingSession: data.session,
+        ),
+      ),
+    );
+    if (result == true) {
+      await _refresh();
+    }
   }
 
   @override
@@ -87,7 +122,7 @@ class _ClassDetailState extends State<ClassDetail> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 26),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: _gradientColors,
@@ -116,7 +151,7 @@ class _ClassDetailState extends State<ClassDetail> {
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.16),
+                    color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
@@ -130,27 +165,48 @@ class _ClassDetailState extends State<ClassDetail> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
+                  color: Colors.white.withValues(alpha: 0.18),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
-                  Icons.menu_book_rounded,
+                  Icons.auto_awesome_rounded,
                   color: Colors.white,
                   size: 20,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 22),
-          Text(
-            widget.className,
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.menu_book_rounded,
+                  color: Colors.white,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.className,
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               const Icon(Icons.groups, size: 16, color: Colors.white70),
@@ -205,8 +261,15 @@ class _ClassDetailState extends State<ClassDetail> {
       );
     }
 
-    final teacher = snapshot.data!.teacher;
-    final students = snapshot.data!.students;
+    final data = snapshot.data!;
+    final teacher = data.teacher;
+    final students = data.students;
+    final session = data.session;
+    final presentCount = session?.presentCount ?? 0;
+    // Every student is either Present or Absent — a student with no
+    // recorded status yet (including when no session exists at all) is
+    // simply treated as Absent, so there's no third "not marked" bucket.
+    final absentCount = students.length - presentCount;
 
     return RefreshIndicator(
       onRefresh: _refresh,
@@ -214,7 +277,7 @@ class _ClassDetailState extends State<ClassDetail> {
         padding: const EdgeInsets.only(bottom: 20),
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: _TeacherCard(
               teacher: teacher,
               onTap: teacher != null
@@ -231,7 +294,28 @@ class _ClassDetailState extends State<ClassDetail> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: _StatsRow(
+              total: students.length,
+              present: presentCount,
+              absent: absentCount,
+              presentColor: _presentColor,
+              absentColor: _absentColor,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+            child: _TakeAttendanceButton(
+              color: _takeAttendanceColor,
+              hasSession: session != null,
+              totalCount: students.length,
+              presentCount: presentCount,
+              absentCount: absentCount,
+              onTap: students.isEmpty ? null : () => _openTakeAttendance(data),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
             child: Row(
               children: [
                 Container(
@@ -273,23 +357,57 @@ class _ClassDetailState extends State<ClassDetail> {
               ),
             )
           else
-            for (final student in students)
+            for (var index = 0; index < students.length; index++)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _StudentCard(
-                  student: student,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => StudentDetail(student: student),
-                      ),
-                    );
-                  },
+                child: _AnimatedEntry(
+                  index: index,
+                  child: _StudentCard(
+                    student: students[index],
+                    status:
+                        session?.statusFor(students[index].id) ?? 'Absent',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              StudentDetail(student: students[index]),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
         ],
       ),
+    );
+  }
+}
+
+/// Fades and slides a child in, staggered by [index], for a lightweight
+/// "list coming to life" feel on first load.
+class _AnimatedEntry extends StatelessWidget {
+  const _AnimatedEntry({required this.index, required this.child});
+
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: Duration(milliseconds: 260 + (index * 40).clamp(0, 400)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, (1 - value) * 16),
+            child: child,
+          ),
+        );
+      },
+      child: child,
     );
   }
 }
@@ -424,24 +542,238 @@ class _TeacherCard extends StatelessWidget {
   }
 }
 
-/// Full-width rectangular student card: photo, name, and status.
-///
-/// There's no daily attendance tracking implemented yet, so "status" here
-/// reflects the student's own active/inactive field rather than a real
-/// per-day attendance record.
-class _StudentCard extends StatelessWidget {
-  final Student student;
-  final VoidCallback onTap;
+/// Total / Present / Absent stat chips for today.
+class _StatsRow extends StatelessWidget {
+  const _StatsRow({
+    required this.total,
+    required this.present,
+    required this.absent,
+    required this.presentColor,
+    required this.absentColor,
+  });
 
-  const _StudentCard({required this.student, required this.onTap});
+  final int total;
+  final int present;
+  final int absent;
+  final Color presentColor;
+  final Color absentColor;
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = student.isActive
+    return Row(
+      children: [
+        Expanded(
+          child: _StatChip(
+            label: 'Students',
+            value: '$total',
+            icon: Icons.groups_rounded,
+            color: const Color(0xFF7E57C2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatChip(
+            label: 'Present',
+            value: '$present',
+            icon: Icons.check_circle_rounded,
+            color: presentColor,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatChip(
+            label: 'Absent',
+            value: '$absent',
+            icon: Icons.cancel_rounded,
+            color: absentColor,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.08),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 10, color: Colors.black54),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Prominent CTA that either invites marking today's attendance, or — once
+/// a session exists for today — summarizes it and offers to edit it.
+class _TakeAttendanceButton extends StatelessWidget {
+  const _TakeAttendanceButton({
+    required this.color,
+    required this.hasSession,
+    required this.totalCount,
+    required this.presentCount,
+    required this.absentCount,
+    required this.onTap,
+  });
+
+  final Color color;
+  final bool hasSession;
+  final int totalCount;
+  final int presentCount;
+  final int absentCount;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color, color.withValues(alpha: 0.75)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.22),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    hasSession
+                        ? Icons.fact_check_rounded
+                        : Icons.checklist_rounded,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        hasSession
+                            ? 'Attendance Marked Today'
+                            : 'Take Attendance',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        hasSession
+                            ? '$presentCount present · $absentCount absent — tap to edit'
+                            : 'Tap to mark today\'s attendance',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white,
+                  size: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Full-width rectangular student card: photo, name, and today's
+/// attendance status. Every student is either Present or Absent — a
+/// student with no recorded status yet is treated as Absent by default.
+class _StudentCard extends StatelessWidget {
+  final Student student;
+  final String status;
+  final VoidCallback onTap;
+
+  const _StudentCard({
+    required this.student,
+    required this.status,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPresent = status == 'Present';
+    final statusColor = isPresent
         ? const Color(0xFF26A69A)
         : const Color(0xFFEF6C00);
-    final statusIcon = student.isActive ? Icons.check_circle : Icons.cancel;
-    final statusLabel = student.isActive ? 'Active' : 'Inactive';
+    final statusIcon = isPresent ? Icons.check_circle : Icons.cancel;
+    final statusLabel = isPresent ? 'Present' : 'Absent';
     final photoUrl = student.photoUrl;
 
     return Container(
@@ -503,7 +835,8 @@ class _StudentCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Container(
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
                     vertical: 6,
