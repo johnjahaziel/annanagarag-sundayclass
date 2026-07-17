@@ -89,6 +89,22 @@ class TeacherRepository {
     return Teacher.fromFirestore(snapshot.docs.first);
   }
 
+  /// The teacher assigned to [assignedClass] for [service] (see
+  /// [Service]), or null if none is assigned. Both are equality filters,
+  /// so this never needs a composite Firestore index.
+  Future<Teacher?> getTeacherForClassAndService({
+    required String assignedClass,
+    required String service,
+  }) async {
+    final snapshot = await _teachersCollection
+        .where('assignedClass', isEqualTo: assignedClass)
+        .where('service', isEqualTo: service)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    return Teacher.fromFirestore(snapshot.docs.first);
+  }
+
   Future<String> _generateNextTeacherId() async {
     final snapshot = await _teachersCollection
         .orderBy('teacherId', descending: true)
@@ -119,6 +135,7 @@ class TeacherRepository {
     required String assignedClass,
     required String role,
     required String status,
+    required String service,
     File? photoFile,
   }) async {
     final normalizedUsername = normalizeUsername(username);
@@ -149,6 +166,7 @@ class TeacherRepository {
       'role': role,
       'status': status,
       'isActive': isActive,
+      'service': service,
       'photoUrl': photoUrl,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -161,6 +179,7 @@ class TeacherRepository {
       gender: gender,
       phone: trimmedPhone,
       assignedClass: assignedClass,
+      service: service,
       role: role,
       status: status,
       isActive: isActive,

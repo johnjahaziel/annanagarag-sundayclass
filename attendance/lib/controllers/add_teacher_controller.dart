@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/main_class.dart';
+import '../models/service.dart';
 import '../repositories/class_repository.dart';
 import '../repositories/teacher_repository.dart';
 
@@ -24,6 +25,7 @@ class AddTeacherController extends GetxController {
   final ClassRepository _classRepository;
 
   static const genderOptions = ['Male', 'Female'];
+  static const serviceOptions = Service.options;
 
   final nameController = TextEditingController();
   final usernameController = TextEditingController();
@@ -33,6 +35,7 @@ class AddTeacherController extends GetxController {
 
   final RxnString selectedGender = RxnString();
   final RxnString selectedAssignedClass = RxnString();
+  final RxnString selectedService = RxnString();
 
   final mainClasses = <MainClass>[].obs;
   final isLoadingMainClasses = false.obs;
@@ -112,6 +115,7 @@ class AddTeacherController extends GetxController {
         assignedClass: selectedAssignedClass.value!,
         role: 'Teacher',
         status: 'Active',
+        service: selectedService.value!,
         photoFile: selectedImage.value,
       );
       _resetForm();
@@ -127,6 +131,7 @@ class AddTeacherController extends GetxController {
     isUsernameEditable.value = false;
     selectedGender.value = null;
     selectedAssignedClass.value = null;
+    selectedService.value = null;
     selectedImage.value = null;
   }
 

@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/main_class.dart';
+import '../models/service.dart';
 import '../repositories/class_repository.dart';
 import '../repositories/student_repository.dart';
 
@@ -22,6 +23,7 @@ class AddStudentController extends GetxController {
   final ClassRepository _classRepository;
 
   static const genderOptions = ['Male', 'Female'];
+  static const serviceOptions = Service.options;
 
   final nameController = TextEditingController();
   final parentNameController = TextEditingController();
@@ -29,6 +31,7 @@ class AddStudentController extends GetxController {
 
   final RxnString selectedGender = RxnString();
   final RxnString selectedAssignedClass = RxnString();
+  final RxnString selectedService = RxnString();
   final Rx<DateTime?> selectedDob = Rx<DateTime?>(null);
 
   final mainClasses = <MainClass>[].obs;
@@ -96,6 +99,7 @@ class AddStudentController extends GetxController {
         parentName: parentNameController.text,
         parentPhone: parentPhoneController.text,
         assignedClass: selectedAssignedClass.value!,
+        service: selectedService.value!,
         photoFile: selectedImage.value,
       );
       _resetForm();
@@ -110,6 +114,7 @@ class AddStudentController extends GetxController {
     parentPhoneController.clear();
     selectedGender.value = null;
     selectedAssignedClass.value = null;
+    selectedService.value = null;
     selectedDob.value = null;
     selectedImage.value = null;
   }

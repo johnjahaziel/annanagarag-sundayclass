@@ -100,6 +100,12 @@ class TeacherDetail extends StatelessWidget {
                     accentColor: _accentColor,
                   ),
                   DetailRow(
+                    icon: Icons.church,
+                    label: 'Service',
+                    value: teacher.service,
+                    accentColor: _accentColor,
+                  ),
+                  DetailRow(
                     icon: Icons.assignment_ind,
                     label: 'Role',
                     value: teacher.role,

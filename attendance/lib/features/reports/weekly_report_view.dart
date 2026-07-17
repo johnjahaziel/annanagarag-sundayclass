@@ -16,6 +16,7 @@ class WeeklyReportView extends StatefulWidget {
 class _WeeklyReportViewState extends State<WeeklyReportView> {
   final _repository = ReportsRepository();
   late DateTime _selectedSunday;
+  String? _selectedService;
   late Future<WeeklyReport> _future;
 
   static const _accentColor = Color(0xFF00ACC1);
@@ -24,7 +25,10 @@ class _WeeklyReportViewState extends State<WeeklyReportView> {
   void initState() {
     super.initState();
     _selectedSunday = _mostRecentSunday();
-    _future = _repository.getWeeklyReport(_selectedSunday);
+    _future = _repository.getWeeklyReport(
+      _selectedSunday,
+      service: _selectedService,
+    );
   }
 
   DateTime _mostRecentSunday() {
@@ -39,8 +43,18 @@ class _WeeklyReportViewState extends State<WeeklyReportView> {
 
   void _reload() {
     setState(() {
-      _future = _repository.getWeeklyReport(_selectedSunday);
+      _future = _repository.getWeeklyReport(
+        _selectedSunday,
+        service: _selectedService,
+      );
     });
+  }
+
+  void _onServiceChanged(String? service) {
+    setState(() {
+      _selectedService = service;
+    });
+    _reload();
   }
 
   Future<void> _pickSunday() async {
@@ -78,6 +92,12 @@ class _WeeklyReportViewState extends State<WeeklyReportView> {
         padding: const EdgeInsets.all(20),
         children: [
           _buildDateSelector(),
+          const SizedBox(height: 12),
+          ServiceFilterChips(
+            selected: _selectedService,
+            onChanged: _onServiceChanged,
+            color: _accentColor,
+          ),
           const SizedBox(height: 16),
           FutureBuilder<WeeklyReport>(
             future: _future,
@@ -152,7 +172,7 @@ class _WeeklyReportViewState extends State<WeeklyReportView> {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.7,
+      childAspectRatio: 1.3,
       children: [
         ReportStatCard(
           label: 'Total Students',

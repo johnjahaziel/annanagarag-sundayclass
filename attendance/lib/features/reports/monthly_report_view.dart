@@ -33,6 +33,7 @@ class _MonthlyReportViewState extends State<MonthlyReportView> {
   final _repository = ReportsRepository();
   late int _year;
   late int _month;
+  String? _selectedService;
   late Future<MonthlyReport> _future;
 
   static const _accentColor = Color(0xFF7E57C2);
@@ -43,13 +44,28 @@ class _MonthlyReportViewState extends State<MonthlyReportView> {
     final now = DateTime.now();
     _year = now.year;
     _month = now.month;
-    _future = _repository.getMonthlyReport(_year, _month);
+    _future = _repository.getMonthlyReport(
+      _year,
+      _month,
+      service: _selectedService,
+    );
   }
 
   void _reload() {
     setState(() {
-      _future = _repository.getMonthlyReport(_year, _month);
+      _future = _repository.getMonthlyReport(
+        _year,
+        _month,
+        service: _selectedService,
+      );
     });
+  }
+
+  void _onServiceChanged(String? service) {
+    setState(() {
+      _selectedService = service;
+    });
+    _reload();
   }
 
   void _shiftMonth(int delta) {
@@ -80,6 +96,12 @@ class _MonthlyReportViewState extends State<MonthlyReportView> {
         padding: const EdgeInsets.all(20),
         children: [
           _buildMonthSelector(),
+          const SizedBox(height: 12),
+          ServiceFilterChips(
+            selected: _selectedService,
+            onChanged: _onServiceChanged,
+            color: _accentColor,
+          ),
           const SizedBox(height: 16),
           FutureBuilder<MonthlyReport>(
             future: _future,

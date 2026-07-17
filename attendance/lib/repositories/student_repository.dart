@@ -42,6 +42,20 @@ class StudentRepository {
     return snapshot.docs.map(Student.fromFirestore).toList();
   }
 
+  /// All students assigned to [className] for [service] (see [Service]).
+  /// Both are equality filters, so this never needs a composite Firestore
+  /// index.
+  Future<List<Student>> getStudentsForClassAndService({
+    required String className,
+    required String service,
+  }) async {
+    final snapshot = await _studentsCollection
+        .where('assignedClass', isEqualTo: className)
+        .where('service', isEqualTo: service)
+        .get();
+    return snapshot.docs.map(Student.fromFirestore).toList();
+  }
+
   Future<String> _generateNextStudentId() async {
     final snapshot = await _studentsCollection
         .orderBy('studentId', descending: true)
@@ -69,6 +83,7 @@ class StudentRepository {
     required String parentName,
     required String parentPhone,
     required String assignedClass,
+    required String service,
     File? photoFile,
   }) async {
     final studentId = await _generateNextStudentId();
@@ -96,6 +111,7 @@ class StudentRepository {
       'parentPhone': trimmedParentPhone,
       'assignedClass': assignedClass,
       'isActive': true,
+      'service': service,
       'photoUrl': photoUrl,
       'createdAt': FieldValue.serverTimestamp(),
     });
@@ -110,6 +126,7 @@ class StudentRepository {
       parentPhone: trimmedParentPhone,
       assignedClass: assignedClass,
       isActive: true,
+      service: service,
       photoUrl: photoUrl,
       createdAt: DateTime.now(),
     );

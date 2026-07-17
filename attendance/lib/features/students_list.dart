@@ -23,6 +23,7 @@ class StudentsList extends StatelessWidget {
               (student) => PersonListItem(
                 name: student.name,
                 assignedClass: student.assignedClass,
+                service: student.service,
                 photoUrl: student.photoUrl,
                 onTap: () {
                   Navigator.push(

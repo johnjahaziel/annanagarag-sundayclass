@@ -268,6 +268,33 @@ class _AddTeacherState extends State<AddTeacher> {
                     },
                   );
                 }),
+                const SizedBox(height: 18),
+
+                // Service Dropdown
+                _buildLabel('Service'),
+                Obx(
+                  () => DropdownButtonFormField<String>(
+                    value: controller.selectedService.value,
+                    borderRadius: BorderRadius.circular(12),
+                    dropdownColor: const Color(0xFFF7F9FC),
+                    decoration: _buildInputDecoration(
+                      'Select service',
+                      Icons.church,
+                    ),
+                    items: AddTeacherController.serviceOptions.map((service) {
+                      return DropdownMenuItem(
+                        value: service,
+                        child: Text(service),
+                      );
+                    }).toList(),
+                    onChanged: (value) =>
+                        controller.selectedService.value = value,
+                    validator: (value) {
+                      if (value == null) return 'Please select a service';
+                      return null;
+                    },
+                  ),
+                ),
                 const SizedBox(height: 30),
 
                 // Submit Button

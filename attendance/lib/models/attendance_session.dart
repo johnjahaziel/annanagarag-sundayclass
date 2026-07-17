@@ -50,6 +50,7 @@ class AttendanceSession {
     required this.teacherName,
     required this.date,
     required this.records,
+    this.service,
   });
 
   final String id;
@@ -58,6 +59,11 @@ class AttendanceSession {
   final String? teacherId;
   final String? teacherName;
   final DateTime date;
+
+  /// Which Sunday service this session belongs to, if attendance is ever
+  /// taken separately per service — see [Service]. Null for the
+  /// whole-class sessions every current caller creates.
+  final String? service;
 
   /// Keyed by studentId.
   final Map<String, AttendanceRecord> records;
@@ -85,6 +91,7 @@ class AttendanceSession {
       teacherId: data['teacherId'] as String?,
       teacherName: data['teacherName'] as String?,
       date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      service: data['service'] as String?,
       records: records,
     );
   }

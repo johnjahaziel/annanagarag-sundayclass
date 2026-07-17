@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
 
+import '../models/service.dart';
+
 /// A minimal view-model shared by Teachers/Students/Admins list screens —
 /// just enough to render a [PeopleListScreen] card.
 class PersonListItem {
   const PersonListItem({
     required this.name,
     required this.assignedClass,
+    required this.service,
     this.photoUrl,
     this.onTap,
   });
 
   final String name;
   final String assignedClass;
+
+  /// Which Sunday service this person belongs to — see [Service].
+  final String service;
   final String? photoUrl;
 
   /// Opens this person's detail screen, if one is wired up by the caller.
   final VoidCallback? onTap;
+}
+
+/// Color-codes a service the same way everywhere it's shown — Service 1
+/// sky blue, Service 2 magenta — so it's recognizable at a glance.
+Color serviceColor(String service) {
+  return service == Service.two
+      ? const Color(0xFFAB47BC)
+      : const Color(0xFF29B6F6);
 }
 
 /// Reusable "people" list screen used by the Teachers, Students, and Admins
@@ -231,17 +245,52 @@ class _PersonCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
+                          _ServiceBadge(service: person.service),
                         ],
                       ),
                     ],
                   ),
                 ),
-                if (person.onTap != null)
+                if (person.onTap != null) ...[
+                  const SizedBox(width: 6),
                   Icon(Icons.arrow_forward_ios, size: 14, color: accentColor),
+                ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Small colored pill showing which service a teacher/student belongs to
+/// — Service 1 sky blue, Service 2 magenta, so it reads at a glance.
+class _ServiceBadge extends StatelessWidget {
+  const _ServiceBadge({required this.service});
+
+  final String service;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = serviceColor(service);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        service,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }

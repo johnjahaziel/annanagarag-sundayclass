@@ -56,6 +56,7 @@ const _teacher = Teacher(
   role: 'Teacher',
   status: 'Active',
   isActive: true,
+  service: 'Service 1',
 );
 
 void main() {

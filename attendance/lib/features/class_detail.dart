@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/attendance_session.dart';
+import '../models/service.dart';
 import '../models/student.dart';
 import '../models/teacher.dart';
 import '../repositories/attendance_repository.dart';
@@ -12,14 +13,28 @@ import 'teacher_detail.dart';
 
 class _ClassDetailData {
   const _ClassDetailData({
-    required this.teacher,
-    required this.students,
-    required this.session,
+    required this.service1Teacher,
+    required this.service2Teacher,
+    required this.service1Students,
+    required this.service2Students,
+    required this.service1Session,
+    required this.service2Session,
   });
 
-  final Teacher? teacher;
-  final List<Student> students;
-  final AttendanceSession? session;
+  final Teacher? service1Teacher;
+  final Teacher? service2Teacher;
+  final List<Student> service1Students;
+  final List<Student> service2Students;
+
+  /// Each service has its own attendance session for today — Service 1
+  /// and Service 2 are always independent documents (see
+  /// [AttendanceRepository.sessionId]), so marking one never touches the
+  /// other.
+  final AttendanceSession? service1Session;
+  final AttendanceSession? service2Session;
+
+  int get totalStudentCount =>
+      service1Students.length + service2Students.length;
 }
 
 class ClassDetail extends StatefulWidget {
@@ -42,6 +57,8 @@ class _ClassDetailState extends State<ClassDetail> {
   static const _presentColor = Color(0xFF26A69A);
   static const _absentColor = Color(0xFFEF6C00);
   static const _takeAttendanceColor = Color(0xFF26C6DA);
+  static const _service1Color = Color(0xFF29B6F6);
+  static const _service2Color = Color(0xFFAB47BC);
 
   @override
   void initState() {
@@ -52,17 +69,40 @@ class _ClassDetailState extends State<ClassDetail> {
   Future<_ClassDetailData> _load() async {
     final today = DateTime.now();
     final results = await Future.wait([
-      _teacherRepository.getTeacherForClass(widget.className),
-      _studentRepository.getStudentsForClass(widget.className),
+      _teacherRepository.getTeacherForClassAndService(
+        assignedClass: widget.className,
+        service: Service.one,
+      ),
+      _teacherRepository.getTeacherForClassAndService(
+        assignedClass: widget.className,
+        service: Service.two,
+      ),
+      _studentRepository.getStudentsForClassAndService(
+        className: widget.className,
+        service: Service.one,
+      ),
+      _studentRepository.getStudentsForClassAndService(
+        className: widget.className,
+        service: Service.two,
+      ),
       _attendanceRepository.getSessionForDate(
         className: widget.className,
         date: today,
+        service: Service.one,
+      ),
+      _attendanceRepository.getSessionForDate(
+        className: widget.className,
+        date: today,
+        service: Service.two,
       ),
     ]);
     return _ClassDetailData(
-      teacher: results[0] as Teacher?,
-      students: results[1] as List<Student>,
-      session: results[2] as AttendanceSession?,
+      service1Teacher: results[0] as Teacher?,
+      service2Teacher: results[1] as Teacher?,
+      service1Students: results[2] as List<Student>,
+      service2Students: results[3] as List<Student>,
+      service1Session: results[4] as AttendanceSession?,
+      service2Session: results[5] as AttendanceSession?,
     );
   }
 
@@ -74,21 +114,41 @@ class _ClassDetailState extends State<ClassDetail> {
     await next;
   }
 
-  Future<void> _openTakeAttendance(_ClassDetailData data) async {
+  Future<void> _openTakeAttendance({
+    required String service,
+    required Teacher? teacher,
+    required List<Student> students,
+    required AttendanceSession? session,
+  }) async {
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => TakeAttendanceScreen(
           className: widget.className,
-          students: data.students,
-          teacher: data.teacher,
-          existingSession: data.session,
+          service: service,
+          students: students,
+          teacher: teacher,
+          existingSession: session,
         ),
       ),
     );
     if (result == true) {
       await _refresh();
     }
+  }
+
+  void _openTeacherDetail(Teacher teacher) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => TeacherDetail(teacher: teacher)),
+    );
+  }
+
+  void _openStudentDetail(Student student) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => StudentDetail(student: student)),
+    );
   }
 
   @override
@@ -118,7 +178,7 @@ class _ClassDetailState extends State<ClassDetail> {
     AsyncSnapshot<_ClassDetailData> snapshot,
   ) {
     final isLoaded = snapshot.connectionState == ConnectionState.done;
-    final studentCount = snapshot.data?.students.length;
+    final studentCount = snapshot.data?.totalStudentCount;
 
     return Container(
       width: double.infinity,
@@ -213,7 +273,7 @@ class _ClassDetailState extends State<ClassDetail> {
               const SizedBox(width: 6),
               Text(
                 isLoaded
-                    ? '${studentCount ?? 0} student${studentCount == 1 ? '' : 's'}'
+                    ? '${studentCount ?? 0} student${studentCount == 1 ? '' : 's'} · 2 services'
                     : 'Loading…',
                 style: const TextStyle(
                   color: Colors.white70,
@@ -262,9 +322,135 @@ class _ClassDetailState extends State<ClassDetail> {
     }
 
     final data = snapshot.data!;
-    final teacher = data.teacher;
-    final students = data.students;
-    final session = data.session;
+
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: _accentColor.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TabBar(
+                indicator: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: const LinearGradient(colors: _gradientColors),
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: const Color(0xFF1E3A5F),
+                labelStyle: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+                tabs: [
+                  Tab(
+                    icon: Icon(Icons.looks_one_rounded, color: _service1Color),
+                    text: Service.one,
+                  ),
+                  Tab(
+                    icon: Icon(Icons.looks_two_rounded, color: _service2Color),
+                    text: Service.two,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _ServiceSection(
+                  accentColor: _service1Color,
+                  presentColor: _presentColor,
+                  absentColor: _absentColor,
+                  takeAttendanceColor: _takeAttendanceColor,
+                  teacher: data.service1Teacher,
+                  students: data.service1Students,
+                  session: data.service1Session,
+                  onRefresh: _refresh,
+                  onTeacherTap: _openTeacherDetail,
+                  onStudentTap: _openStudentDetail,
+                  onTakeAttendance: () => _openTakeAttendance(
+                    service: Service.one,
+                    teacher: data.service1Teacher,
+                    students: data.service1Students,
+                    session: data.service1Session,
+                  ),
+                ),
+                _ServiceSection(
+                  accentColor: _service2Color,
+                  presentColor: _presentColor,
+                  absentColor: _absentColor,
+                  takeAttendanceColor: _takeAttendanceColor,
+                  teacher: data.service2Teacher,
+                  students: data.service2Students,
+                  session: data.service2Session,
+                  onRefresh: _refresh,
+                  onTeacherTap: _openTeacherDetail,
+                  onStudentTap: _openStudentDetail,
+                  onTakeAttendance: () => _openTakeAttendance(
+                    service: Service.two,
+                    teacher: data.service2Teacher,
+                    students: data.service2Students,
+                    session: data.service2Session,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One service's tab body: that service's teacher card, today's
+/// present/absent stats, a Take Attendance button scoped to just this
+/// service, and that service's students — each pulled to refresh
+/// independently.
+class _ServiceSection extends StatelessWidget {
+  const _ServiceSection({
+    required this.accentColor,
+    required this.presentColor,
+    required this.absentColor,
+    required this.takeAttendanceColor,
+    required this.teacher,
+    required this.students,
+    required this.session,
+    required this.onRefresh,
+    required this.onTeacherTap,
+    required this.onStudentTap,
+    required this.onTakeAttendance,
+  });
+
+  final Color accentColor;
+  final Color presentColor;
+  final Color absentColor;
+  final Color takeAttendanceColor;
+  final Teacher? teacher;
+  final List<Student> students;
+  final AttendanceSession? session;
+  final Future<void> Function() onRefresh;
+  final ValueChanged<Teacher> onTeacherTap;
+  final ValueChanged<Student> onStudentTap;
+  final VoidCallback onTakeAttendance;
+
+  @override
+  Widget build(BuildContext context) {
+    final teacher = this.teacher;
     final presentCount = session?.presentCount ?? 0;
     // Every student is either Present or Absent — a student with no
     // recorded status yet (including when no session exists at all) is
@@ -272,85 +458,73 @@ class _ClassDetailState extends State<ClassDetail> {
     final absentCount = students.length - presentCount;
 
     return RefreshIndicator(
-      onRefresh: _refresh,
+      onRefresh: onRefresh,
       child: ListView(
-        padding: const EdgeInsets.only(bottom: 20),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: _TeacherCard(
-              teacher: teacher,
-              onTap: teacher != null
-                  ? () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              TeacherDetail(teacher: teacher),
-                        ),
-                      );
-                    }
-                  : null,
-            ),
+          _TeacherCard(
+            teacher: teacher,
+            accentColor: accentColor,
+            onTap: teacher != null ? () => onTeacherTap(teacher) : null,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: _StatsRow(
-              total: students.length,
-              present: presentCount,
-              absent: absentCount,
-              presentColor: _presentColor,
-              absentColor: _absentColor,
-            ),
+          const SizedBox(height: 16),
+          _StatsRow(
+            total: students.length,
+            present: presentCount,
+            absent: absentCount,
+            presentColor: presentColor,
+            absentColor: absentColor,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-            child: _TakeAttendanceButton(
-              color: _takeAttendanceColor,
-              hasSession: session != null,
-              totalCount: students.length,
-              presentCount: presentCount,
-              absentCount: absentCount,
-              onTap: students.isEmpty ? null : () => _openTakeAttendance(data),
-            ),
+          const SizedBox(height: 16),
+          _TakeAttendanceButton(
+            color: takeAttendanceColor,
+            hasSession: session != null,
+            totalCount: students.length,
+            presentCount: presentCount,
+            absentCount: absentCount,
+            onTap: students.isEmpty ? null : onTakeAttendance,
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: _accentColor.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.groups_2_rounded,
-                    size: 16,
-                    color: _accentColor,
-                  ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: accentColor.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Students',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E3A5F),
-                  ),
+                child: Icon(
+                  Icons.groups_2_rounded,
+                  size: 16,
+                  color: accentColor,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Students',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1E3A5F),
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 12),
           if (students.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
               child: Column(
                 children: [
-                  Icon(Icons.school_outlined, size: 48, color: Colors.black26),
-                  SizedBox(height: 12),
-                  Text(
-                    'No students in this class yet.',
+                  Icon(
+                    Icons.emoji_people_rounded,
+                    size: 48,
+                    color: accentColor.withValues(alpha: 0.35),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'No students in this service yet.',
+                    textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.black54),
                   ),
                 ],
@@ -358,24 +532,12 @@ class _ClassDetailState extends State<ClassDetail> {
             )
           else
             for (var index = 0; index < students.length; index++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: _AnimatedEntry(
-                  index: index,
-                  child: _StudentCard(
-                    student: students[index],
-                    status:
-                        session?.statusFor(students[index].id) ?? 'Absent',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              StudentDetail(student: students[index]),
-                        ),
-                      );
-                    },
-                  ),
+              _AnimatedEntry(
+                index: index,
+                child: _StudentCard(
+                  student: students[index],
+                  status: session?.statusFor(students[index].id) ?? 'Absent',
+                  onTap: () => onStudentTap(students[index]),
                 ),
               ),
         ],
@@ -412,14 +574,18 @@ class _AnimatedEntry extends StatelessWidget {
   }
 }
 
-/// Big card showing the assigned teacher's photo, name, and phone number.
+/// Big card showing a service's assigned teacher's photo, name, and phone
+/// number — or a friendly "No Teacher Assigned" empty state.
 class _TeacherCard extends StatelessWidget {
   final Teacher? teacher;
+  final Color accentColor;
   final VoidCallback? onTap;
 
-  const _TeacherCard({required this.teacher, required this.onTap});
-
-  static const _accentColor = Color(0xFF5E35B1);
+  const _TeacherCard({
+    required this.teacher,
+    required this.accentColor,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -432,7 +598,7 @@ class _TeacherCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: _accentColor.withValues(alpha: 0.1),
+            color: accentColor.withValues(alpha: 0.1),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -454,28 +620,23 @@ class _TeacherCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: _accentColor.withValues(alpha: 0.3),
+                      color: accentColor.withValues(alpha: 0.3),
                       width: 3,
                     ),
-                    color: _accentColor.withValues(alpha: 0.1),
+                    color: accentColor.withValues(alpha: 0.1),
                   ),
                   child: ClipOval(
                     child: photoUrl != null && photoUrl.isNotEmpty
                         ? Image.network(
                             photoUrl,
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(
-                                  Icons.person,
-                                  size: 34,
-                                  color: _accentColor,
-                                ),
+                            errorBuilder: (context, error, stackTrace) => Icon(
+                              Icons.person,
+                              size: 34,
+                              color: accentColor,
+                            ),
                           )
-                        : const Icon(
-                            Icons.person,
-                            size: 34,
-                            color: _accentColor,
-                          ),
+                        : Icon(Icons.person, size: 34, color: accentColor),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -508,18 +669,14 @@ class _TeacherCard extends StatelessWidget {
                         const SizedBox(height: 6),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.phone,
-                              size: 14,
-                              color: _accentColor,
-                            ),
+                            Icon(Icons.phone, size: 14, color: accentColor),
                             const SizedBox(width: 6),
                             Text(
                               teacher.phone,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: _accentColor,
+                                color: accentColor,
                               ),
                             ),
                           ],

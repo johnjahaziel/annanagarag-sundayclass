@@ -45,9 +45,14 @@ class WeeklyReport {
     required this.presentCount,
     required this.classSummaries,
     required this.studentEntries,
+    this.service,
   });
 
   final DateTime date;
+
+  /// Which service this report is scoped to, or null if it's combined
+  /// across both services.
+  final String? service;
   final int totalStudents;
   final int presentCount;
   final List<ClassAttendanceSummary> classSummaries;
@@ -108,10 +113,15 @@ class MonthlyReport {
     required this.sundays,
     required this.classStats,
     required this.studentStats,
+    this.service,
   });
 
   final int year;
   final int month;
+
+  /// Which service this report is scoped to, or null if it's combined
+  /// across both services.
+  final String? service;
   final List<DateTime> sundays;
   final List<ClassMonthlyStat> classStats;
   final List<StudentMonthlyStat> studentStats;

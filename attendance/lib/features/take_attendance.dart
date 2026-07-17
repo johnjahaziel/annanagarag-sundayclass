@@ -12,12 +12,19 @@ class TakeAttendanceScreen extends StatefulWidget {
   const TakeAttendanceScreen({
     super.key,
     required this.className,
+    required this.service,
     required this.students,
     required this.teacher,
     this.existingSession,
   });
 
   final String className;
+
+  /// Which service this attendance session belongs to — see [Service].
+  /// Attendance is always taken for one specific service at a time, never
+  /// combined, so a class with two services needs this screen opened
+  /// twice (once per service).
+  final String service;
   final List<Student> students;
   final Teacher? teacher;
   final AttendanceSession? existingSession;
@@ -76,6 +83,7 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
       };
       await _repository.saveSession(
         className: widget.className,
+        service: widget.service,
         teacherId: widget.teacher?.id,
         teacherName: widget.teacher?.name,
         date: now,
@@ -108,17 +116,21 @@ class _TakeAttendanceScreenState extends State<TakeAttendanceScreen> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Take Attendance',
-              style: TextStyle(
+            // Deliberately explicit — this is what stops a teacher from
+            // accidentally marking one service's attendance for the other.
+            Text(
+              '${widget.className} - ${widget.service}',
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            Text(
-              widget.className,
-              style: const TextStyle(fontSize: 12, color: Colors.white70),
+            const Text(
+              'Attendance',
+              style: TextStyle(fontSize: 12, color: Colors.white70),
             ),
           ],
         ),

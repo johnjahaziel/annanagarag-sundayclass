@@ -14,6 +14,7 @@ class Teacher {
     required this.role,
     required this.status,
     required this.isActive,
+    required this.service,
     this.photoUrl,
     this.createdAt,
   });
@@ -31,6 +32,9 @@ class Teacher {
   final String role;
   final String status;
   final bool isActive;
+
+  /// Which Sunday service this teacher is assigned to — see [Service].
+  final String service;
   final String? photoUrl;
   final DateTime? createdAt;
 
@@ -46,6 +50,7 @@ class Teacher {
       role: data['role'] as String? ?? '',
       status: data['status'] as String? ?? '',
       isActive: data['isActive'] as bool? ?? true,
+      service: data['service'] as String? ?? '',
       photoUrl: data['photoUrl'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );

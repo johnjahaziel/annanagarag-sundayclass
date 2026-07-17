@@ -131,6 +131,12 @@ class _StudentDetailState extends State<StudentDetail> {
                     value: student.assignedClass,
                     accentColor: _accentColor,
                   ),
+                  DetailRow(
+                    icon: Icons.church,
+                    label: 'Service',
+                    value: student.service,
+                    accentColor: _accentColor,
+                  ),
                   if (createdAt != null)
                     DetailRow(
                       icon: Icons.event,

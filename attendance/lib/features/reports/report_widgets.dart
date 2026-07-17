@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../models/service.dart';
+
 /// Color-codes a percentage the same way everywhere in the Reports
 /// module: healthy attendance is teal, borderline is amber, and low
 /// attendance is orange/red — makes the numbers easy to read at a glance.
@@ -42,29 +44,35 @@ class ReportStatCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 16),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
               color: color,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 2),
           Text(
             label,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 11, color: Colors.black54),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -303,6 +311,98 @@ class ReportEmptyState extends StatelessWidget {
             style: const TextStyle(color: Colors.black54),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Lets a report be scoped to "Combined" (both services summed) or one
+/// specific service — used at the top of the Weekly and Monthly report
+/// tabs.
+class ServiceFilterChips extends StatelessWidget {
+  const ServiceFilterChips({
+    super.key,
+    required this.selected,
+    required this.onChanged,
+    required this.color,
+  });
+
+  /// The currently selected service, or null for "Combined".
+  final String? selected;
+  final ValueChanged<String?> onChanged;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _Chip(
+            label: 'Combined',
+            isSelected: selected == null,
+            color: color,
+            onTap: () => onChanged(null),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Chip(
+            label: Service.one,
+            isSelected: selected == Service.one,
+            color: color,
+            onTap: () => onChanged(Service.one),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Chip(
+            label: Service.two,
+            isSelected: selected == Service.two,
+            color: color,
+            onTap: () => onChanged(Service.two),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.label,
+    required this.isSelected,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: isSelected ? 1 : 0.25),
+          ),
+        ),
+        child: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: isSelected ? Colors.white : color,
+          ),
+        ),
       ),
     );
   }

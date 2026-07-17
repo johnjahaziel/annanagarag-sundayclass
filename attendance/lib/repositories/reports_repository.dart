@@ -40,17 +40,34 @@ class ReportsRepository {
     return byClass;
   }
 
-  /// The attendance picture for [sunday] across every class.
-  Future<WeeklyReport> getWeeklyReport(DateTime sunday) async {
+  /// The attendance picture for [sunday] across every class. Pass
+  /// [service] to scope the whole report to just that service; omitted,
+  /// it's the combined picture across both services.
+  Future<WeeklyReport> getWeeklyReport(
+    DateTime sunday, {
+    String? service,
+  }) async {
     final dateOnly = DateTime(sunday.year, sunday.month, sunday.day);
     final results = await Future.wait([
-      _attendanceRepository.getSessionsForDate(dateOnly),
+      _attendanceRepository.getSessionsForDate(dateOnly, service: service),
       _studentRepository.getStudents(),
     ]);
     final sessions = results[0] as List<AttendanceSession>;
-    final allStudents = results[1] as List<Student>;
+    var allStudents = results[1] as List<Student>;
+    if (service != null) {
+      allStudents = allStudents
+          .where((student) => student.service == service)
+          .toList();
+    }
 
-    final sessionByClassId = {for (final s in sessions) s.classId: s};
+    // Keyed by classId *and* the session's own service — a class can now
+    // have up to two sessions for the same day (one per service), and a
+    // student's status only ever lives in the session matching their own
+    // service, so looking this up by classId alone would silently drop
+    // one service's session.
+    final sessionByClassAndService = {
+      for (final s in sessions) '${s.classId}_${s.service}': s,
+    };
     final studentsByClass = _groupByClass(allStudents);
 
     final classSummaries = <ClassAttendanceSummary>[];
@@ -60,10 +77,11 @@ class ReportsRepository {
     for (final entry in studentsByClass.entries) {
       final className = entry.key;
       final classId = AttendanceRepository.normalizeClassId(className);
-      final session = sessionByClassId[classId];
 
       var present = 0;
       for (final student in entry.value) {
+        final session =
+            sessionByClassAndService['${classId}_${student.service}'];
         final status = session?.statusFor(student.id) ?? 'Absent';
         if (status == 'Present') present++;
         studentEntries.add(
@@ -91,6 +109,7 @@ class ReportsRepository {
 
     return WeeklyReport(
       date: dateOnly,
+      service: service,
       totalStudents: allStudents.length,
       presentCount: totalPresent,
       classSummaries: classSummaries,
@@ -99,19 +118,34 @@ class ReportsRepository {
   }
 
   /// The attendance picture for [year]/[month], calculated using only the
-  /// Sundays that fall within it.
-  Future<MonthlyReport> getMonthlyReport(int year, int month) async {
+  /// Sundays that fall within it. Pass [service] to scope the whole
+  /// report to just that service; omitted, it's the combined picture
+  /// across both services.
+  Future<MonthlyReport> getMonthlyReport(
+    int year,
+    int month, {
+    String? service,
+  }) async {
     final sundays = sundaysInMonth(year, month);
     final results = await Future.wait([
-      _attendanceRepository.getSessionsForMonth(year, month),
+      _attendanceRepository.getSessionsForMonth(year, month, service: service),
       _studentRepository.getStudents(),
     ]);
     final sessions = results[0] as List<AttendanceSession>;
-    final allStudents = results[1] as List<Student>;
+    var allStudents = results[1] as List<Student>;
+    if (service != null) {
+      allStudents = allStudents
+          .where((student) => student.service == service)
+          .toList();
+    }
 
-    final sessionByClassAndDate = {
+    // Keyed by classId + the session's own service + date, for the same
+    // reason as in getWeeklyReport — a class can have a session per
+    // service on the same Sunday.
+    final sessionByClassServiceAndDate = {
       for (final s in sessions)
-        '${s.classId}_${AttendanceRepository.yyyyMMdd(s.date)}': s,
+        '${s.classId}_${s.service}_${AttendanceRepository.yyyyMMdd(s.date)}':
+            s,
     };
     final studentsByClass = _groupByClass(allStudents);
 
@@ -127,8 +161,8 @@ class ReportsRepository {
         var studentPresent = 0;
         for (final sunday in sundays) {
           final key =
-              '${classId}_${AttendanceRepository.yyyyMMdd(sunday)}';
-          final session = sessionByClassAndDate[key];
+              '${classId}_${student.service}_${AttendanceRepository.yyyyMMdd(sunday)}';
+          final session = sessionByClassServiceAndDate[key];
           final status = session?.statusFor(student.id) ?? 'Absent';
           if (status == 'Present') {
             studentPresent++;
@@ -161,6 +195,7 @@ class ReportsRepository {
     return MonthlyReport(
       year: year,
       month: month,
+      service: service,
       sundays: sundays,
       classStats: classStats,
       studentStats: studentStats,
@@ -169,6 +204,9 @@ class ReportsRepository {
 
   /// The attendance summary shown on a student's details page: this
   /// month's percentage, all-time present/absent totals, and history.
+  ///
+  /// Combined across both services — a student only ever belongs to one
+  /// service, so their own numbers are unaffected either way.
   Future<StudentReportSummary> getStudentReport(Student student) async {
     final now = DateTime.now();
     final results = await Future.wait([
@@ -218,6 +256,12 @@ class ReportsRepository {
   /// The attendance summary shown for a single class: student count,
   /// this month's average attendance, and a trend across its last few
   /// recorded Sundays.
+  ///
+  /// Combined across both services — splitting this per service too is
+  /// straightforward to add later (getSessionsForClass already returns
+  /// every service's sessions; this would just need to group them the
+  /// same way getWeeklyReport/getMonthlyReport do) but wasn't asked for
+  /// here, so it's left as-is.
   Future<ClassReportSummary> getClassReport(String className) async {
     final now = DateTime.now();
     final results = await Future.wait([

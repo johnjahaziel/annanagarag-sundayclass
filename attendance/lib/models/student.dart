@@ -13,6 +13,7 @@ class Student {
     required this.parentPhone,
     required this.assignedClass,
     required this.isActive,
+    required this.service,
     this.photoUrl,
     this.createdAt,
   });
@@ -29,6 +30,9 @@ class Student {
   final String parentPhone;
   final String assignedClass;
   final bool isActive;
+
+  /// Which Sunday service this student is assigned to — see [Service].
+  final String service;
   final String? photoUrl;
   final DateTime? createdAt;
 
@@ -43,6 +47,7 @@ class Student {
       parentPhone: data['parentPhone'] as String? ?? '',
       assignedClass: data['assignedClass'] as String? ?? '',
       isActive: data['isActive'] as bool? ?? true,
+      service: data['service'] as String? ?? '',
       photoUrl: data['photoUrl'] as String?,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate(),
     );
