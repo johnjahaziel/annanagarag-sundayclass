@@ -22,6 +22,7 @@ class StudentsList extends StatelessWidget {
             .map(
               (student) => PersonListItem(
                 name: student.name,
+                phone: student.parentPhone,
                 assignedClass: student.assignedClass,
                 service: student.service,
                 photoUrl: student.photoUrl,

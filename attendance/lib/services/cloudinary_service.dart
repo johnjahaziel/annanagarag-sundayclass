@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import 'image_compression_service.dart';
+
 /// Thrown when a Cloudinary upload fails, either from a network error or
 /// an error response from Cloudinary itself.
 class CloudinaryUploadException implements Exception {
@@ -18,7 +20,9 @@ class CloudinaryUploadException implements Exception {
 /// unsigned upload preset — no Firebase Storage and no server-side signing
 /// involved.
 class CloudinaryService {
-  CloudinaryService({http.Client? client}) : _client = client ?? http.Client();
+  CloudinaryService({http.Client? client, ImageCompressionService? compressor})
+    : _client = client ?? http.Client(),
+      _compressor = compressor ?? ImageCompressionService();
 
   // TODO: update if this app is ever pointed at a different Cloudinary
   // account.
@@ -26,6 +30,7 @@ class CloudinaryService {
   static const _uploadPreset = 'sunday_kids_profile';
 
   final http.Client _client;
+  final ImageCompressionService _compressor;
 
   Uri get _uploadUrl =>
       Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/image/upload');
@@ -70,10 +75,14 @@ class CloudinaryService {
     final publicId =
         '$folder/${sanitizedIdentifier}_${DateTime.now().millisecondsSinceEpoch}';
 
+    final uploadImage = await _compressor.compress(image);
+
     final request = http.MultipartRequest('POST', _uploadUrl)
       ..fields['upload_preset'] = _uploadPreset
       ..fields['public_id'] = publicId
-      ..files.add(await http.MultipartFile.fromPath('file', image.path));
+      ..files.add(
+        await http.MultipartFile.fromPath('file', uploadImage.path),
+      );
 
     final http.StreamedResponse streamedResponse;
     try {

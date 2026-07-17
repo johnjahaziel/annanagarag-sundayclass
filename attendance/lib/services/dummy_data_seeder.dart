@@ -167,7 +167,7 @@ class DummyDataSeeder {
     final failures = <String>[];
 
     for (final mainClass in mainClasses) {
-      for (final division in mainClass.divisions) {
+      for (final division in mainClass.displayClassNames) {
         final classId = AttendanceRepository.normalizeClassId(division);
 
         for (final service in Service.options) {

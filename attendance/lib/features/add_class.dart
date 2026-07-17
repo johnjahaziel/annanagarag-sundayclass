@@ -211,7 +211,7 @@ class _AddClassState extends State<AddClass> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildLabel('Class Divisions'),
+                    _buildLabel('Class Divisions (optional)'),
                     IconButton(
                       onPressed: controller.addDivisionField,
                       icon: const Icon(
@@ -243,13 +243,6 @@ class _AddClassState extends State<AddClass> {
                                     'e.g. Beginner ${i + 1}',
                                     Icons.groups_2,
                                   ),
-                                  validator: (value) {
-                                    if (value == null ||
-                                        value.trim().isEmpty) {
-                                      return 'Division name is required';
-                                    }
-                                    return null;
-                                  },
                                 ),
                               ),
                               if (controller.divisionControllers.length > 1)

@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../repositories/admin_repository.dart';
+import '../widgets/image_source_sheet.dart';
+import 'home_controller.dart';
 
 /// Drives the Add Admin screen and saves through [AdminRepository]. Keeps
 /// the username in sync with the name field until the user opts to edit
@@ -36,8 +38,10 @@ class AddAdminController extends GetxController {
   }
 
   Future<void> pickImage() async {
+    final source = await pickImageSource();
+    if (source == null) return;
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
+    final image = await picker.pickImage(source: source);
     if (image != null) {
       selectedImage.value = File(image.path);
     }
@@ -76,6 +80,7 @@ class AddAdminController extends GetxController {
         photoFile: selectedImage.value,
       );
       _resetForm();
+      HomeController.refreshIfRegistered();
     } finally {
       isSaving.value = false;
     }

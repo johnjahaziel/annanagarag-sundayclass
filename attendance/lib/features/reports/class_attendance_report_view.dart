@@ -59,7 +59,7 @@ class _ClassAttendanceReportViewState
     final monthly = results[2] as MonthlyReport;
 
     final divisions = mainClasses
-        .expand((mainClass) => mainClass.divisions)
+        .expand((mainClass) => mainClass.displayClassNames)
         .toList();
 
     final percentageByClass = {

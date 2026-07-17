@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../models/main_class.dart';
 import '../repositories/class_repository.dart';
+import 'home_controller.dart';
 
 /// Sentinel dropdown value representing the "+ New Main Class" option.
 const String kNewMainClassOption = '__new_main_class__';
@@ -106,6 +107,7 @@ class AddClassController extends GetxController {
       );
       _resetForm();
       await loadMainClasses();
+      HomeController.refreshIfRegistered();
     } finally {
       isSaving.value = false;
     }

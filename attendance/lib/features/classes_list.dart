@@ -5,10 +5,14 @@ import '../repositories/class_repository.dart';
 import 'class_detail.dart';
 
 class _DivisionEntry {
-  const _DivisionEntry({required this.division, required this.mainClassName});
+  const _DivisionEntry({required this.division, this.mainClassName});
 
   final String division;
-  final String mainClassName;
+
+  /// The parent main class name, shown as a "Part of X" subtitle — null
+  /// when [division] *is* the main class itself (it has no divisions of
+  /// its own), since that subtitle would just repeat the title.
+  final String? mainClassName;
 }
 
 /// Shows every class division — reached from the Homepage's "Classes" stat
@@ -87,10 +91,12 @@ class _ClassesListState extends State<ClassesList> {
           final mainClasses = snapshot.data ?? const [];
           final entries = <_DivisionEntry>[
             for (final mainClass in mainClasses)
-              for (final division in mainClass.divisions)
+              for (final division in mainClass.displayClassNames)
                 _DivisionEntry(
                   division: division,
-                  mainClassName: mainClass.name,
+                  mainClassName: mainClass.divisions.isEmpty
+                      ? null
+                      : mainClass.name,
                 ),
           ];
           if (entries.isEmpty) {
@@ -168,15 +174,17 @@ class _ClassesListState extends State<ClassesList> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Part of ${entry.mainClassName}',
-                                  style: TextStyle(
-                                    color: _accentColor,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
+                                if (entry.mainClassName != null) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Part of ${entry.mainClassName}',
+                                    style: TextStyle(
+                                      color: _accentColor,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 12,
+                                    ),
                                   ),
-                                ),
+                                ],
                               ],
                             ),
                           ),

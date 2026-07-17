@@ -9,6 +9,8 @@ import '../models/main_class.dart';
 import '../models/service.dart';
 import '../repositories/class_repository.dart';
 import '../repositories/student_repository.dart';
+import '../widgets/image_source_sheet.dart';
+import 'home_controller.dart';
 
 /// Drives the Add Student screen: streams the Assigned Class options from
 /// the `class` collection and saves through [StudentRepository].
@@ -44,11 +46,13 @@ class AddStudentController extends GetxController {
 
   StreamSubscription<List<MainClass>>? _mainClassesSubscription;
 
-  /// The divisions across every main class, in the same order shown in the
-  /// Homepage's Class List — the assigned class is a specific division
-  /// (e.g. "Beginner 1"), not just the main class.
-  List<String> get assignedClassOptions =>
-      mainClasses.expand((mainClass) => mainClass.divisions).toList();
+  /// The class names across every main class, in the same order shown in
+  /// the Homepage's Class List — a specific division (e.g. "Beginner 1")
+  /// where the main class has any, otherwise the main class itself. See
+  /// [MainClass.displayClassNames].
+  List<String> get assignedClassOptions => mainClasses
+      .expand((mainClass) => mainClass.displayClassNames)
+      .toList();
 
   @override
   void onInit() {
@@ -72,8 +76,10 @@ class AddStudentController extends GetxController {
   }
 
   Future<void> pickImage() async {
+    final source = await pickImageSource();
+    if (source == null) return;
     final picker = ImagePicker();
-    final image = await picker.pickImage(source: ImageSource.gallery);
+    final image = await picker.pickImage(source: source);
     if (image != null) {
       selectedImage.value = File(image.path);
     }
@@ -103,6 +109,7 @@ class AddStudentController extends GetxController {
         photoFile: selectedImage.value,
       );
       _resetForm();
+      HomeController.refreshIfRegistered();
     } finally {
       isSaving.value = false;
     }

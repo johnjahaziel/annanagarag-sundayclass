@@ -7,6 +7,7 @@ import '../models/service.dart';
 class PersonListItem {
   const PersonListItem({
     required this.name,
+    required this.phone,
     required this.assignedClass,
     required this.service,
     this.photoUrl,
@@ -14,6 +15,7 @@ class PersonListItem {
   });
 
   final String name;
+  final String phone;
   final String assignedClass;
 
   /// Which Sunday service this person belongs to — see [Service].
@@ -22,6 +24,17 @@ class PersonListItem {
 
   /// Opens this person's detail screen, if one is wired up by the caller.
   final VoidCallback? onTap;
+
+  /// Whether this person matches a search [query] against name, phone,
+  /// service, or class — case-insensitive substring match.
+  bool matches(String query) {
+    if (query.isEmpty) return true;
+    final q = query.toLowerCase();
+    return name.toLowerCase().contains(q) ||
+        phone.toLowerCase().contains(q) ||
+        service.toLowerCase().contains(q) ||
+        assignedClass.toLowerCase().contains(q);
+  }
 }
 
 /// Color-codes a service the same way everywhere it's shown — Service 1
@@ -57,11 +70,24 @@ class PeopleListScreen extends StatefulWidget {
 
 class _PeopleListScreenState extends State<PeopleListScreen> {
   late Future<List<PersonListItem>> _future;
+  final _searchController = TextEditingController();
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
     _future = widget.loader();
+    _searchController.addListener(() {
+      setState(() {
+        _query = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _retry() {
@@ -90,53 +116,109 @@ class _PeopleListScreenState extends State<PeopleListScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: FutureBuilder<List<PersonListItem>>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Failed to load: ${snapshot.error}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.redAccent),
-                    ),
-                    const SizedBox(height: 12),
-                    TextButton(onPressed: _retry, child: const Text('Retry')),
-                  ],
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name, phone, service, or class',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isEmpty
+                    ? null
+                    : IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => _searchController.clear(),
+                      ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: widget.accentColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: widget.accentColor.withValues(alpha: 0.2),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(color: widget.accentColor),
                 ),
               ),
-            );
-          }
-          final people = snapshot.data ?? const [];
-          if (people.isEmpty) {
-            return Center(
-              child: Text(
-                widget.emptyMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: people.length,
-            itemBuilder: (context, index) {
-              final person = people[index];
-              return _PersonCard(
-                person: person,
-                accentColor: widget.accentColor,
-              );
-            },
-          );
-        },
+            ),
+          ),
+          Expanded(
+            child: FutureBuilder<List<PersonListItem>>(
+              future: _future,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Failed to load: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.redAccent),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _retry,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                final people = snapshot.data ?? const [];
+                if (people.isEmpty) {
+                  return Center(
+                    child: Text(
+                      widget.emptyMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                  );
+                }
+                final filtered = people
+                    .where((person) => person.matches(_query))
+                    .toList();
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'No matches for "$_query"',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.black54),
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: filtered.length,
+                  itemBuilder: (context, index) {
+                    final person = filtered[index];
+                    return _PersonCard(
+                      person: person,
+                      accentColor: widget.accentColor,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -245,10 +327,10 @@ class _PersonCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          _ServiceBadge(service: person.service),
                         ],
                       ),
+                      const SizedBox(height: 6),
+                      _ServiceBadge(service: person.service),
                     ],
                   ),
                 ),

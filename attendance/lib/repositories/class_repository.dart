@@ -89,12 +89,14 @@ class ClassRepository {
   }
 
   /// Returns a user-facing validation message for [rawDivisions], or null
-  /// when they're all non-empty and free of duplicates (case-insensitive).
+  /// when the non-empty ones are free of duplicates (case-insensitive).
+  /// Divisions are optional, so blank entries are ignored rather than
+  /// rejected.
   static String? validateDivisionNames(List<String> rawDivisions) {
-    final trimmed = rawDivisions.map((d) => d.trim()).toList();
-    if (trimmed.isEmpty || trimmed.any((d) => d.isEmpty)) {
-      return 'Division names cannot be empty';
-    }
+    final trimmed = rawDivisions
+        .map((d) => d.trim())
+        .where((d) => d.isNotEmpty)
+        .toList();
     final lowerCased = trimmed.map((d) => d.toLowerCase()).toList();
     if (lowerCased.toSet().length != lowerCased.length) {
       return 'Duplicate division names are not allowed';
@@ -144,7 +146,10 @@ class ClassRepository {
       throw ClassAlreadyExistsException(trimmedName);
     }
 
-    final trimmedDivisions = divisions.map((d) => d.trim()).toList();
+    final trimmedDivisions = divisions
+        .map((d) => d.trim())
+        .where((d) => d.isNotEmpty)
+        .toList();
     await docRef.set({
       'name': trimmedName,
       'divisions': trimmedDivisions,
@@ -195,7 +200,9 @@ class ClassRepository {
           .toSet();
 
       final toAdd = <String>[];
-      for (final division in newDivisions.map((d) => d.trim())) {
+      for (final division in newDivisions
+          .map((d) => d.trim())
+          .where((d) => d.isNotEmpty)) {
         final key = division.toLowerCase();
         if (existingLower.contains(key)) {
           throw DuplicateDivisionException(division);

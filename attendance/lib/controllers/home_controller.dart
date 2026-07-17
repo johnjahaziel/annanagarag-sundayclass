@@ -41,6 +41,18 @@ class HomeController extends GetxController {
     loadDashboardData();
   }
 
+  /// Refreshes the dashboard if it's currently live (i.e. this controller
+  /// is registered with GetX) — called by the Add Teacher/Student/Class/
+  /// Admin controllers right after a successful save, so the Homepage's
+  /// stat counts and Class List panel pick up the new record immediately
+  /// on return, without restarting the app or a manual pull-to-refresh.
+  /// A no-op if the Homepage isn't currently on screen.
+  static void refreshIfRegistered() {
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().loadDashboardData();
+    }
+  }
+
   Future<void> loadDashboardData() async {
     isLoading.value = true;
     loadError.value = null;
@@ -62,9 +74,11 @@ class HomeController extends GetxController {
     }
   }
 
-  /// All division names across every main class, in display order.
+  /// All class names across every main class, in display order — a main
+  /// class's divisions if it has any, otherwise the main class itself. See
+  /// [MainClass.displayClassNames].
   List<String> get divisionNames =>
-      mainClasses.expand((mainClass) => mainClass.divisions).toList();
+      mainClasses.expand((mainClass) => mainClass.displayClassNames).toList();
 
   // Excludes any legacy teacher docs with role "Admin" from before admins
   // got their own collection.

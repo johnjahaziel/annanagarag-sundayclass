@@ -19,6 +19,12 @@ class MainClass {
   final bool isActive;
   final DateTime? createdAt;
 
+  /// The names to show for this main class wherever classes are listed or
+  /// selected — its individual divisions if it has any (e.g. "Beginner 1",
+  /// "Beginner 2"), otherwise just the main class itself (e.g. "Primary"),
+  /// so a class with no divisions yet is still visible and selectable.
+  List<String> get displayClassNames => divisions.isEmpty ? [name] : divisions;
+
   factory MainClass.fromFirestore(
     QueryDocumentSnapshot<Map<String, dynamic>> doc,
   ) {
